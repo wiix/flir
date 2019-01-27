@@ -1,6 +1,4 @@
 #include "myiic.h"
-#include "delay.h"
-#include "usart.h"
  
 //初始化IIC
 void IIC_Init(void)
@@ -160,22 +158,49 @@ u8 Init_AMG8833(void){
 
 
 
+u8 ShutDownAMG8833(void){
+	IIC_Start();
+	IIC_Send_Byte(0xD2);
+	if(IIC_Wait_Ack())return 0;
+	IIC_Send_Byte(0x00);
+	if(IIC_Wait_Ack())return 0;
+	IIC_Send_Byte(0x10);
+	if(IIC_Wait_Ack())return 0;
+	IIC_Stop();
+	return 1;
+}
 
 
-extern long data[40][40];
-extern long ext[3];
-extern u8 ext_add[2];
-
-
-
-u16 test_table[8][8];
+void data_push(void){
+	u8 i;
+	ext[0]=0;
+	ext[1]=0x7fff;
+	
+	for(i=0;i<64;i++){
+			
+		if(PriData[i/8][i%8]>ext[0]){	//遍历最值
+			ext[0]=PriData[i/8][i%8];
+			ext_add[0]=i;
+		}
+		if(PriData[i/8][i%8]<ext[1]){
+			ext[1]=PriData[i/8][i%8];
+			ext_add[1]=i;
+		}
+	
+#if (Size == SIZEx5)
+		data[PixLg-1-(i / 8 * PixGain + 2)][i % 8 * PixGain + 2] = PriData[i/8][i%8];//数据填充
+#elif (Size == SIZEx8)
+		data[PixLg-1-(i / 8 * PixGain + 1)][i % 8 * PixGain + 1] = PriData[i/8][i%8];
+#endif
+	
+	}
+}
 
 
 u8 get_data(void) {
 	int i;
 	long buf;
-	ext[0]=0;
-	ext[1]=0x7fff;
+	
 	IIC_Start();
 	IIC_Send_Byte(0xD2);
 	if(IIC_Wait_Ack())return 0;
@@ -184,9 +209,12 @@ u8 get_data(void) {
 	IIC_Start();
 	IIC_Send_Byte(0xD3);
 	if(IIC_Wait_Ack())return 0;
+	
 	for (i = 0; i < 63; i++) {
+		
 		buf=IIC_Read_Byte(1)&0xff;
 		buf|=(0xff&IIC_Read_Byte(1))<<8;
+		
  		if((buf&0x800)==0x800){
 			buf=~buf;
 			buf&=0xFFF;
@@ -196,39 +224,25 @@ u8 get_data(void) {
 		else if(buf>0x200){
 			buf=0x200;
 		}
-		if(buf>ext[0]){
-			ext[0]=buf;
-			ext_add[0]=i;
-		}
-		if(buf<ext[1]){
-			ext[1]=buf;
-			ext_add[1]=i;
-		}
-		data[39-(i / 8 * 5 + 2)][i * 5 % 40 + 2] = buf;
+		
+		PriData[i/8][i%8] = buf;
 	}
+	
 	buf=IIC_Read_Byte(1)&0xff;
 	buf|=(0xff&IIC_Read_Byte(0))<<8;
- 		if((buf&0x800)==0x800){
-			buf=~buf;
-			buf&=0xFFF;
-			buf++;
-			buf=-buf;
-		}
-		else if(buf>0x200){
-			buf=0x200;
-		}
-	if(buf>ext[0]){
-		ext[0]=buf;
-		ext_add[0]=i;
+	
+	if((buf&0x800)==0x800){
+		buf=~buf;
+		buf&=0xFFF;
+		buf++;
+		buf=-buf;
 	}
-	if(buf<ext[1]){
-		ext[1]=buf;
-		ext_add[1]=i;
+	else if(buf>0x200){
+		buf=0x200;
 	}
-	data[39-(i / 8 * 5 + 2)][i * 5 % 40 + 2] = buf;
+	PriData[i/8][i%8] = buf;
 	IIC_Stop();
 	
-	if(USART_RX_BUF!=0)send_once();
 	return 1;
 	
 }

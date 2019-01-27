@@ -1,32 +1,5 @@
-/******************************************************************************
-
-*重要说明！
-在.h文件中，#define Immediately时是立即显示当前画面
-而如果#define Delay，则只有在执行了LCD_WR_REG(0x0007,0x0173);
-之后才会显示，执行一次LCD_WR_REG(0x0007,0x0173)后，所有写入数
-据都立即显示。
-#define Delay一般用在开机画面的显示，防止显示出全屏图像的刷新过程
-******************************************************************************/
-#include "stm32f10x.h"
 #include "LCD.h"
-#include "stm32f10x_fsmc.h"
-#include "key.h"
 #include "pic.h"
-#include "myiic.h"
-#include "adc.h"
-/*
- * 函数名：LCD_GPIO_Config
- * 描述  ：根据FSMC配置LCD的I/O
- * 输入  ：无
- * 输出  ：无
- * 调用  ：内部调用        
- */
- u8 color_mod=Iron;
- u8 test_mod=none;
-
-extern long data[40][40];
-extern long ext[3];
-extern u8 ext_add[2];
 
 
 void LCD_GPIO_Config(void){
@@ -135,13 +108,13 @@ static void LCD_FSMC_Config(void)
     FSMC_NORSRAMCmd(FSMC_Bank1_NORSRAM1, ENABLE);  
 }
 
-volatile static void Delay(__IO u32 nCount)
+void Delay(u32 nCount)
 {	
-	volatile int i;
+	int i;
 	for(i=0;i<7200;i++)
     for(; nCount != 0; nCount--);
-}  
-  
+}
+
 u16 ssd1289_GetPoint(u16 x,u8 y)
 {
 	 u16 a = 0;
@@ -157,13 +130,15 @@ u16 ssd1289_GetPoint(u16 x,u8 y)
 	 a = *(__IO u16 *) (Bank1_LCD_D); 
    return(a);	  
 }
-volatile static void LCD_Rst(void)
+
+void LCD_Rst(void)
 {			
     Clr_Rst;
     Delay(1000);					   
     Set_Rst;		 	 
     Delay(1000);	
 }
+
 static void WriteComm(u16 CMD)
 {			
 //	CMD=(CMD<<4)|(CMD>>4);
@@ -223,24 +198,63 @@ LCD_FSMC_Config();
 Delay(20);
 LCD_Rst();
 
+WriteInitCMD();
+	
+WriteComm(0x29); //Display on
+	
+Lcd_Clear();
+
+Lcd_Light_OFF;
+
+// Lcd_Light_ON;
+
+//Lcd_ColorBox(0,0,240,320,Yellow);
+
+
+// printf("ReadPixel=%04x\r\n",ReadPixel(10, 9));
+// DrawPixel(10, 10, 0xaaaa);
+// printf("ReadPixel=%04x\r\n",ReadPixel(10, 10));
+// DrawPixel(10, 11, 0XFFFF);
+// printf("ReadPixel=%04x\r\n",ReadPixel(10, 11));
+// DrawPixel(10, 12, 0X00);
+// printf("ReadPixel=%04x\r\n",ReadPixel(10, 12));
+
+// DrawPixel(10, 13, 0Xf800);
+// printf("ReadPixel=%04x\r\n",ReadPixel(10, 13));
+// DrawPixel(10, 14, 0X3e0);
+// printf("ReadPixel=%04x\r\n",ReadPixel(10, 14));
+// DrawPixel(10, 15, 0X1f);
+// printf("ReadPixel=%04x\r\n",ReadPixel(10, 15));
+// WriteComm(0x20);
+
+
+// while(1);
+}
+
+
+
+void WriteInitCMD(void){
+	
 WriteComm(0x11); //Sleep out
 Delay(120); //Delay 120ms
 //------------------------------------ST7735S Frame Rate-----------------------------------------//
-WriteComm(0xB1);
-WriteData(0x05);
-WriteData(0x3A);
-WriteData(0x3A);
+WriteComm(0xB1);  //78hz
+WriteData(0x04);
+WriteData(0x20);
+WriteData(0x20);
+	
 WriteComm(0xB2);
-WriteData(0x05);
-WriteData(0x3A);
-WriteData(0x3A);
+WriteData(0x04);
+WriteData(0x20);
+WriteData(0x20);
+	
 WriteComm(0xB3);
-WriteData(0x05);
-WriteData(0x3A);
-WriteData(0x3A);
-WriteData(0x05);
-WriteData(0x3A);
-WriteData(0x3A);
+WriteData(0x04);
+WriteData(0x20);
+WriteData(0x20);
+WriteData(0x04);
+WriteData(0x20);
+WriteData(0x20);
 //------------------------------------End ST7735S Frame Rate-----------------------------------------//
 WriteComm(0xB4); //Dot inversion
 WriteData(0x03);
@@ -265,7 +279,13 @@ WriteData(0xEE);
 WriteComm(0xC5); //VCOM
 WriteData(0x0D);
 WriteComm(0x36); //MX, MY, RGB mode
-WriteData(0xC8);
+
+#ifdef LcdOldVersion
+WriteData(0xC8);  //<---
+#else
+WriteData(0xC0);  //<---
+#endif
+
 //------------------------------------ST7735S Gamma Sequence-----------------------------------------//
 WriteComm(0xE0);
 WriteData(0x0A);
@@ -304,38 +324,11 @@ WriteData(0x03);
 WriteData(0x0D);
 //------------------------------------End ST7735S Gamma Sequence-----------------------------------------//
 WriteComm(0x3A); //65k mode
-WriteData(0x55);
+WriteData(0x05);
 
 
 WriteComm(0x29); //Display on
-	
-Lcd_Clear();
 
-Lcd_Light_OFF;
-
-// Lcd_Light_ON;
-
-//Lcd_ColorBox(0,0,240,320,Yellow);
-
-
-// printf("ReadPixel=%04x\r\n",ReadPixel(10, 9));
-// DrawPixel(10, 10, 0xaaaa);
-// printf("ReadPixel=%04x\r\n",ReadPixel(10, 10));
-// DrawPixel(10, 11, 0XFFFF);
-// printf("ReadPixel=%04x\r\n",ReadPixel(10, 11));
-// DrawPixel(10, 12, 0X00);
-// printf("ReadPixel=%04x\r\n",ReadPixel(10, 12));
-
-// DrawPixel(10, 13, 0Xf800);
-// printf("ReadPixel=%04x\r\n",ReadPixel(10, 13));
-// DrawPixel(10, 14, 0X3e0);
-// printf("ReadPixel=%04x\r\n",ReadPixel(10, 14));
-// DrawPixel(10, 15, 0X1f);
-// printf("ReadPixel=%04x\r\n",ReadPixel(10, 15));
-// WriteComm(0x20);
-
-
-// while(1);
 }
 /******************************************
 函数名：Lcd写命令函数
@@ -370,10 +363,13 @@ void Lcd_WR_Start(void)
 ***********************************************/
 void BlockWrite(unsigned int Xstart,unsigned int Xend,unsigned int Ystart,unsigned int Yend) 
 {
+	
+#ifdef LcdOldVersion
 	Xstart += 2;
 	Xend += 2;
 	Ystart += 1;
 	Yend += 1;
+#endif
 	
 	WriteComm(0x2a);   
 	WriteData(Xstart>>8);
@@ -466,74 +462,105 @@ void DrawBack(void){
 
 u16 To_HSB(u8 num){
 	u8 R=0,G=0,B=0;
+	u8 ColrModeBuf;
 	float a;
 	u32 b;
-	if(color_mod==Iron){
-		a=0.7*num;
-		a+=20;
-		num=(u8)a;
-		if (num < 64) {
-			B = (unsigned char)(num * 4);
-			G = 0;
-			R = 0;
-		}
-		else if (num < 96) {
-			B = 255;
-			G = 0;
-			R = (unsigned char)(4 * (num - 64));
-		}
-		else if (num < 128) {
-			B = (unsigned char)(256 - 8 * (num - 95));
-			G = 0;
-			R = (unsigned char)(4 * (num - 64) - 1);
-		}
-		else if (num < 191) {
-			B = 0;
-			G = (unsigned char)(4 * (num - 128));
-			R = 255;
-		}
-		else {
-			B = (unsigned char)(4 * (num - 191));
-			G = 255;
-			R = 255;
-		}
-	}else if(color_mod==BW){
-		R=G=B=num;
-	}else if(color_mod==RB){
-		b=240*num;
-		b/=255;
-		num=(u8)b;
-		if (num < 60) {
-			B = 255;
-			G = num*4;
-			R = 0;
-		}
-		else if (num < 120) {
-			B = (120-num)*4;
-			G = 255;
-			R = 0;
-		}
-		else if (num < 180) {
-			B = 0;
-			G = 255;
-			R = (num-119)*4;
-		}else{
-			B = 0;
-			G = (240-num)*4;
-			R = 255;
-		}
-	}
-	// RRRRR GGGGG ? BBBBB//
 	
-	return 0xFFFF&((B&0xf8)>>3|(G&0xf8)<<3|(R&0xf8)<<8);
-}	
+	//判断部分伪彩色
+	if((SysState.ColrMode == Iron)
+	||(SysState.ColrMode == IronMax && num >= 153)
+	||(SysState.ColrMode == IronMin && num <= 103)){
+		ColrModeBuf = Iron;
+	}
+	else if(SysState.ColrMode == RB){
+		ColrModeBuf = RB;
+	}
+	else{
+		ColrModeBuf = BW;
+	}
+	
+	switch (ColrModeBuf){
+		
+		case Iron:{
+			a=0.7*num;
+			a+=20;
+			num=(u8)a;
+			if (num < 64) {
+				B = (unsigned char)(num * 4);
+				G = 0;
+				R = 0;
+			}
+			else if (num < 96) {
+				B = 255;
+				G = 0;
+				R = (unsigned char)(4 * (num - 64));
+			}
+			else if (num < 128) {
+				B = (unsigned char)(256 - 8 * (num - 95));
+				G = 0;
+				R = (unsigned char)(4 * (num - 64) - 1);
+			}
+			else if (num < 191) {
+				B = 0;
+				G = (unsigned char)(4 * (num - 128));
+				R = 255;
+			}
+			else {
+				B = (unsigned char)(4 * (num - 191));
+				G = 255;
+				R = 255;
+			}
+			break;
+		}
+		
+		case RB:{
+			b = 240*num;
+			b /= 255;
+			num = (u8)b;
+			if (num < 60) {
+				B = 255;
+				G = num*4;
+				R = 0;
+			}
+			else if (num < 120) {
+				B = (120-num)*4;
+				G = 255;
+				R = 0;
+			}
+			else if (num < 180) {
+				B = 0;
+				G = 255;
+				R = (num-119)*4;
+			}else{
+				B = 0;
+				G = (240-num)*4;
+				R = 255;
+			}
+			break;
+		}
+			
+		case BW:{
+			R=G=B=num;
+			break;
+		}
+		
+		default:
+			R=G=B=num;
+		
+	}
+	
+	
+	// RRRRR GGGGG+G BBBBB//
+	
+	return 0xFFFF&((B&0xf8)>>3|(G&0xfC)<<3|(R&0xf8)<<8);
+}
 
 
 void logo_move(void){
 	static u8 step=0;
 	u8 i;
 	step++;
-	if(step==8)step=0;
+	if(step == 8)	step = 0;
   BlockWrite(0,2,152,159);
 	for (i = 0; i < 3*8*2; i++){
 		*(__IO u16 *) (Bank1_LCD_D) = gImage_logo[i+(7-step)*3*2];
@@ -575,6 +602,24 @@ void Draw_battery(u8 num){
 	}
 }
 
+void get_img(void){
+	u16 i;
+	long diff = ext[0] - ext[1] + 2;
+	if(diff<20)	diff = 20;
+	for(i=0;i<PixLg*PixLg;i++){
+		data[i/PixLg][i%PixLg]=To_HSB(0xff&((data[i/PixLg][i%PixLg]-ext[1]+1)*0xff/diff));
+	}
+}
+
+#if (Size == SIZEx5)
+
+void Draw_img(void){
+	u16 i;
+	//BlockWrite(4,123,40,159);
+	for (i = 0; i < PixLg*PixLg; i++){
+		Lcd_ColorBox(4+i/PixLg*3,PixLg+i%PixLg*3,3,3,data[i/PixLg][i%PixLg]);
+	}
+}
 
 void blowup(void) {
 	int i;
@@ -600,22 +645,59 @@ void blowup(void) {
 	}
 	ext[2]=data[19][19];
 }
-
-void get_img(void){
-	u16 i;
-	long diff=ext[0]-ext[1]+2;
-	for(i=0;i<40*40;i++){
-		data[i/40][i%40]=To_HSB(0xff&((data[i/40][i%40]-ext[1]+1)*0xff/diff));
-	}
-}
+#elif (Size == SIZEx8)
 
 void Draw_img(void){
 	u16 i;
-	//BlockWrite(4,123,40,159);
-	for (i = 0; i < 40*40; i++){
-		Lcd_ColorBox(4+i/40*3,40+i%40*3,3,3,data[i/40][i%40]);
+	for (i = 0; i < PixLg; i++){
+		Lcd_ColorBox(5+i*2,40,2,1,data[i][0]);
+		Lcd_ColorBox(5+i*2,159,2,1,data[i][PixLg-1]);
+		Lcd_ColorBox(4,41+i*2,1,2,data[0][i]);
+		Lcd_ColorBox(123,41+i*2,1,2,data[PixLg-1][i]);
+	}
+	Lcd_ColorBox(4,40,1,1,data[0][0]);
+	Lcd_ColorBox(4,159,1,1,data[0][PixLg-1]);
+	Lcd_ColorBox(123,40,1,1,data[PixLg-1][0]);
+	Lcd_ColorBox(123,159,1,1,data[PixLg-1][PixLg-1]);
+	for (i = 0; i < PixLg*PixLg; i++){
+// 		if(SysState.DispMeas == midd && i/PixLg>29 && i/PixLg<43 && i%PixLg>19 && i%PixLg<38)
+// 			;
+// 		else
+			Lcd_ColorBox(5+i/PixLg*2,41+i%PixLg*2,2,2,data[i/PixLg][i%PixLg]);
 	}
 }
+
+void blowup(void) {
+	int i;
+	for (i = 0; i < 8 * 7; i++) {
+		data[i / 7 * 8 + 1][i % 7 * 8 + 1 + 1] = 1+ data[i / 7 * 8 + 1][i % 7 * 8 + 1] * t7 + data[i / 7 * 8 + 1][i % 7 * 8 + 1 + 8] * t1;
+		data[i / 7 * 8 + 1][i % 7 * 8 + 1 + 2] = 1+ data[i / 7 * 8 + 1][i % 7 * 8 + 1] * t6 + data[i / 7 * 8 + 1][i % 7 * 8 + 1 + 8] * t2;
+		data[i / 7 * 8 + 1][i % 7 * 8 + 1 + 3] = 1+ data[i / 7 * 8 + 1][i % 7 * 8 + 1] * t5 + data[i / 7 * 8 + 1][i % 7 * 8 + 1 + 8] * t3;
+		data[i / 7 * 8 + 1][i % 7 * 8 + 1 + 4] = 1+ data[i / 7 * 8 + 1][i % 7 * 8 + 1] * t4 + data[i / 7 * 8 + 1][i % 7 * 8 + 1 + 8] * t4;
+		data[i / 7 * 8 + 1][i % 7 * 8 + 1 + 5] = 1+ data[i / 7 * 8 + 1][i % 7 * 8 + 1] * t3 + data[i / 7 * 8 + 1][i % 7 * 8 + 1 + 8] * t5;
+		data[i / 7 * 8 + 1][i % 7 * 8 + 1 + 6] = 1+ data[i / 7 * 8 + 1][i % 7 * 8 + 1] * t2 + data[i / 7 * 8 + 1][i % 7 * 8 + 1 + 8] * t6;
+		data[i / 7 * 8 + 1][i % 7 * 8 + 1 + 7] = 1+ data[i / 7 * 8 + 1][i % 7 * 8 + 1] * t1 + data[i / 7 * 8 + 1][i % 7 * 8 + 1 + 8] * t7;
+	}
+	for (i = 0; i < 7 * 57; i++) {
+		data[i % 7 * 8 + 1 + 1][i / 7 + 1] = 1+ data[i % 7 * 8 + 1][i / 7 + 1] * t7 + data[i % 7 * 8 + 1 + 8][i / 7 + 1] * t1;
+		data[i % 7 * 8 + 1 + 2][i / 7 + 1] = 1+ data[i % 7 * 8 + 1][i / 7 + 1] * t6 + data[i % 7 * 8 + 1 + 8][i / 7 + 1] * t2;
+		data[i % 7 * 8 + 1 + 3][i / 7 + 1] = 1+ data[i % 7 * 8 + 1][i / 7 + 1] * t5 + data[i % 7 * 8 + 1 + 8][i / 7 + 1] * t3;
+		data[i % 7 * 8 + 1 + 4][i / 7 + 1] = 1+ data[i % 7 * 8 + 1][i / 7 + 1] * t4 + data[i % 7 * 8 + 1 + 8][i / 7 + 1] * t4;
+		data[i % 7 * 8 + 1 + 5][i / 7 + 1] = 1+ data[i % 7 * 8 + 1][i / 7 + 1] * t3 + data[i % 7 * 8 + 1 + 8][i / 7 + 1] * t5;
+		data[i % 7 * 8 + 1 + 6][i / 7 + 1] = 1+ data[i % 7 * 8 + 1][i / 7 + 1] * t2 + data[i % 7 * 8 + 1 + 8][i / 7 + 1] * t6;
+		data[i % 7 * 8 + 1 + 7][i / 7 + 1] = 1+ data[i % 7 * 8 + 1][i / 7 + 1] * t1 + data[i % 7 * 8 + 1 + 8][i / 7 + 1] * t7;
+	}
+	for (i = 0; i < 57; i++) {
+		data[0][i + 1] = data[1][i + 1];
+		data[58][i + 1] = data[57][i + 1];
+	}
+	for (i = 0; i < 59; i++) {
+		data[i][0] = data[i][1];
+		data[i][58] = data[i][57];
+	}
+	ext[2]=data[29][29];
+}
+#endif
 
 void Draw_A_num(u16 x, u16 y,u8 size,u8 back,u8 num){
   u16 i;
@@ -661,17 +743,17 @@ void Draw_A_num(u16 x, u16 y,u8 size,u8 back,u8 num){
 
 void Draw_menu(void){
 	u16 i;
-	if(test_mod==none){
+	if(SysState.DispMeas == None){
 		BlockWrite(35,69,0,16);
 		for (i = 0; i < 1190; i++){
 			*(__IO u16 *) (Bank1_LCD_D) = gImage_menu[i];
 		}
-	}else if(test_mod==midd){
+	}else if(SysState.DispMeas == Midd){
 		BlockWrite(35,69,0,16);
 		for (i = 0; i < 1190; i++){
 			*(__IO u16 *) (Bank1_LCD_D) = gImage_menu[1190+i];
 		}
-	}else if(test_mod==exts){
+	}else if(SysState.DispMeas == Exts){
 		BlockWrite(35,69,0,16);
 		for (i = 0; i < 1190; i++){
 			*(__IO u16 *) (Bank1_LCD_D) = gImage_menu[2380+i];
@@ -680,7 +762,7 @@ void Draw_menu(void){
 }
 
 void Draw_Num(u16 x,u16 y,u8 bk,int num){    //右上角的位置
-	if(num>=1000){
+	if(num >= 1000){
 		if(bk){
 			Lcd_ColorBox(x,y+9,18,2,White);
 			Lcd_ColorBox(x,y+20,18,2,White);
@@ -691,7 +773,7 @@ void Draw_Num(u16 x,u16 y,u8 bk,int num){    //右上角的位置
 		Draw_A_num(x,y+22,9,bk,num/1000%10);     //max
 		Draw_A_num(x,y+11,9,bk,num/100%10);
 		Draw_A_num(x,y,9,bk,num/10%10);
-	}else if(num>=0){
+	}else if(num >= 0){
 		if(bk){
 			Lcd_ColorBox(x,y,9,5,White);
 			Lcd_ColorBox(x,y+5,18,1,White);
@@ -712,8 +794,8 @@ void Draw_Num(u16 x,u16 y,u8 bk,int num){    //右上角的位置
 		Draw_A_num(x,y+21,9,bk,num/100%10);     //max
 		Draw_A_num(x,y+10,9,bk,num/10%10);
 		Draw_A_num(x+9,y,5,bk,num%10);
-	}else if(num>=-99){
-		num=-num;
+	}else if(num >= -99){
+		num = -num;
 		if(bk){
 			Lcd_ColorBox(x,y,9,5,White);
 			Lcd_ColorBox(x,y+5,18,1,White);
@@ -734,7 +816,7 @@ void Draw_Num(u16 x,u16 y,u8 bk,int num){    //右上角的位置
 		Draw_A_num(x,y+10,9,bk,num/10%10);
 		Draw_A_num(x+9,y,5,bk,num%10);
 	}else{
-		num=-num;
+		num =- num;
 		if(bk){
 			Lcd_ColorBox(x,y+9,18,2,White);
 			LCD_Fill_Pic(x,y+21,18,10,gImage_neg_W);
@@ -748,19 +830,52 @@ void Draw_Num(u16 x,u16 y,u8 bk,int num){    //右上角的位置
 }
 
 
+void Draw_Tab(u16 x,u16 y,u16 Color){
+	if(x<10)x=10;
+	if(y<47)y=47;
+	if(x>116)x=116;
+	if(y>153)y=153;
+	Lcd_ColorBox(x,y-6,2,4,Color);
+	Lcd_ColorBox(x,y+2,2,4,Color);
+	Lcd_ColorBox(x-5,y-1,4,2,Color);
+	Lcd_ColorBox(x+3,y-1,4,2,Color);
+	
+}
+
+
 void Draw_data(void){
-	int max=(int)(ext[0])*10/4;
-	int min=(int)(ext[1])*10/4;
-	int mid=(int)(ext[2])*10/4;
-	if(test_mod==midd){            //mid
-		Lcd_ColorBox(61,100,3,3,Black);
-		Lcd_ColorBox(66,82,24,35,White);
-		
-  	Draw_Num(69,84,1,mid);
-	}else if(test_mod==exts){
-		Lcd_ColorBox(10+(7-ext_add[0]/8)*15,46+(ext_add[0]%8)*15,3,3,Black);
-		Lcd_ColorBox(10+(7-ext_add[1]/8)*15,46+(ext_add[1]%8)*15,3,3,White);
+	int max = (int)(ext[0])*10/4;
+	int min = (int)(ext[1])*10/4;
+	int mid = (int)(ext[2])*10/4;
+	
+#if (Size == SIZEx5)
+	
+	if(SysState.DispMeas == Midd){            //mid
+		Draw_Tab(61,99,Black);
+		Lcd_ColorBox(72,82,24,35,White);
+  	Draw_Num(75,84,1,mid);
+	}else if(SysState.DispMeas == Exts){
+// 		Lcd_ColorBox(10+(7-ext_add[0]/8)*15,46+(ext_add[0]%8)*15,3,3,Black);
+// 		Lcd_ColorBox(10+(7-ext_add[1]/8)*15,46+(ext_add[1]%8)*15,3,3,White);
+		Draw_Tab(10+(7-ext_add[0]/8)*15,47+(ext_add[0]%8)*15,Black);
+		Draw_Tab(10+(7-ext_add[1]/8)*15,47+(ext_add[1]%8)*15,White);
 	}
+	
+#elif (Size == SIZEx8)
+	
+	if(SysState.DispMeas == Midd){            //mid
+		Draw_Tab(61,99,Black);
+		Lcd_ColorBox(72,82,24,35,White);
+  	Draw_Num(75,84,1,mid);
+	}else if(SysState.DispMeas == Exts){
+// 		Lcd_ColorBox(7+(7-ext_add[0]/8)*16,43+(ext_add[0]%8)*16,2,2,Black);
+// 		Lcd_ColorBox(7+(7-ext_add[1]/8)*16,43+(ext_add[1]%8)*16,2,2,White);
+		Draw_Tab(7+(7-ext_add[0]/8)*16,44+(ext_add[0]%8)*16,Black);
+		Draw_Tab(7+(7-ext_add[1]/8)*16,44+(ext_add[1]%8)*16,White);
+	}
+	
+#endif
+	
 	Draw_Num(0,0,0,max);
 	Draw_Num(110,0,0,min);
 }
@@ -768,9 +883,34 @@ void Draw_data(void){
 
 
 void Draw_color(void){
-	if(color_mod==Iron)LCD_Fill_Pic(4,33,120,7,gImage_Iron);
-	else if(color_mod==RB)LCD_Fill_Pic(4,33,120,7,gImage_RB);
-	else if(color_mod==BW)LCD_Fill_Pic(4,33,120,7,gImage_BW);
+	
+	switch(SysState.ColrMode){
+		
+		case Iron:
+			LCD_Fill_Pic(4,33,120,7,gImage_Iron);
+			break;
+		
+		case IronMax:
+			LCD_Fill_Pic(4,33,120,7,gImage_IronMax);
+			break;
+		
+		case IronMin:
+			LCD_Fill_Pic(4,33,120,7,gImage_IronMin);
+			break;
+		
+		case RB:
+			LCD_Fill_Pic(4,33,120,7,gImage_RB);
+			break;
+		
+		case BW:
+			LCD_Fill_Pic(4,33,120,7,gImage_BW);
+			break;
+		
+		default:
+			LCD_Fill_Pic(4,33,120,7,gImage_Iron);
+			
+	}
+	
 }
 
 
@@ -786,23 +926,23 @@ void Draw_BackPlay(void){
 	LCD_Fill_Pic(75,5,9,9,gImage_backplay);
 }
 
-void disp_fast(void){    //快速刷新
-	get_data();    //获取数据
-	blowup();      //插值
-	get_img();      //插值转换为rgb图片
-	Draw_img();       //显示图片
-	Draw_data();       //显示数据
-	logo_move();       //运行指示
+void Draw_Warning(void){
+	int max=(int)(ext[0])*10/4;
+	int min=(int)(ext[1])*10/4;
+	if(max>800 || min<0   //超过最值
+		|| BatPct<5){					//电量过低
+			LCD_Fill_Pic(52,18,12,13,gImage_Warning);
+	}else{
+		Lcd_ColorBox(52,18,12,13,Black);   //消除图标
+	}
 }
 
-void disp_slow(void){     //慢速刷新+按键操作刷新
- 	BatPct=BatPct*0.95+(float)(Get_Battery())*0.05;
-// 	BatPct = Get_Battery();
-	if(BatPct>99)BatPct = 100;
-	Draw_battery((u8)BatPct);   //电量
-	Draw_menu();    //显示菜单
-	Draw_color();
+void SoftResetLCD(void){
+	WriteComm(0x01);
 }
 
 
+void ReInitLCD(void){
+	WriteInitCMD();
+}
 

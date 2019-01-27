@@ -12,3 +12,9 @@
 ![flir](https://github.com/AnalogDragon/flir/blob/master/1.jpg)
 
 ![flir](https://github.com/AnalogDragon/flir/blob/master/readme.png)
+
+
+
+开机图片放在0:/sys/BootGrap.bmp 尺寸:160*128
+
+To_clean_old_BMP.exe放在 //picture/ 下运行可以将BMP文件处理成纯图片数据
